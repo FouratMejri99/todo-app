@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -15,6 +15,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Store } from '@ngrx/store';
 import { Observable } from 'rxjs';
 
+import { Router } from '@angular/router';
+import { User } from '../../../shared/models';
 import { AppState } from '../../../store/app.state';
 import * as AuthActions from '../../store/auth.actions';
 import * as AuthSelectors from '../../store/auth.selectors';
@@ -51,7 +53,9 @@ export class LoginComponent implements OnInit {
 
   constructor(
     private formBuilder: FormBuilder,
-    private store: Store<AppState>
+    private store: Store<AppState>,
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.loginForm = this.createLoginForm();
     this.loading$ = this.store.select(AuthSelectors.selectAuthLoading);
@@ -77,11 +81,26 @@ export class LoginComponent implements OnInit {
    */
   onSubmit(): void {
     if (this.loginForm.valid) {
-      const loginRequest = {
-        email: this.loginForm.get('email')?.value,
+      const email: string = this.loginForm.get('email')?.value;
+      const user: User = {
+        id: `user_${this.safeBase64Encode(email)
+          .replace(/[^a-zA-Z0-9]/g, '')
+          .substring(0, 8)}`,
+        email,
+        name: this.extractNameFromEmail(email),
+        createdAt: new Date(),
       };
 
-      this.store.dispatch(AuthActions.login({ loginRequest }));
+      if (
+        isPlatformBrowser(this.platformId) &&
+        typeof localStorage !== 'undefined'
+      ) {
+        localStorage.setItem('currentUser', JSON.stringify(user));
+      }
+
+      this.store.dispatch(AuthActions.clearAuthError());
+      this.store.dispatch(AuthActions.loginSuccess({ user }));
+      this.router.navigate(['/tasks']);
     } else {
       // Mark all fields as touched to show validation errors
       this.loginForm.markAllAsTouched();
@@ -111,5 +130,25 @@ export class LoginComponent implements OnInit {
       emailControl?.invalid &&
       (emailControl?.dirty || emailControl?.touched)
     );
+  }
+
+  private extractNameFromEmail(email: string): string {
+    const name = email.split('@')[0];
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }
+
+  private safeBase64Encode(value: string): string {
+    if (typeof btoa === 'function') {
+      return btoa(value);
+    }
+    try {
+      const nodeBuffer = (globalThis as any).Buffer;
+      if (nodeBuffer) {
+        return nodeBuffer.from(value, 'utf-8').toString('base64');
+      }
+    } catch {}
+    return Array.from(value)
+      .map((c) => c.charCodeAt(0).toString(16))
+      .join('');
   }
 }

@@ -1,5 +1,11 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import {
+  Component,
+  Inject,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -9,7 +15,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Store } from '@ngrx/store';
 import { Observable, Subject, combineLatest } from 'rxjs';
-import { map, takeUntil } from 'rxjs/operators';
+import { map, take, takeUntil } from 'rxjs/operators';
 
 import * as AuthSelectors from '../../../auth/store/auth.selectors';
 import { Task } from '../../../shared/models';
@@ -53,7 +59,11 @@ export class TaskListComponent implements OnInit, OnDestroy {
   /** Component destruction subject */
   private destroy$ = new Subject<void>();
 
-  constructor(private store: Store<AppState>, private dialog: MatDialog) {
+  constructor(
+    private store: Store<AppState>,
+    private dialog: MatDialog,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
     this.loading$ = this.store.select(TaskSelectors.selectTaskLoading);
     this.error$ = this.store.select(TaskSelectors.selectTaskError);
     this.userId$ = this.store.select(AuthSelectors.selectUserId);
@@ -73,7 +83,7 @@ export class TaskListComponent implements OnInit, OnDestroy {
     // Load tasks when component initializes
     this.userId$.pipe(takeUntil(this.destroy$)).subscribe((userId) => {
       if (userId) {
-        this.store.dispatch(TaskActions.loadTasks({ userId }));
+        this.loadTasksFromLocalStorage(userId);
       }
     });
   }
@@ -96,15 +106,29 @@ export class TaskListComponent implements OnInit, OnDestroy {
 
     dialogRef.afterClosed().subscribe((result) => {
       if (result) {
-        this.userId$.pipe(takeUntil(this.destroy$)).subscribe((userId) => {
-          if (userId) {
-            this.store.dispatch(
-              TaskActions.addTask({
-                createRequest: { ...result, userId },
-              })
-            );
-          }
-        });
+        this.userId$
+          .pipe(takeUntil(this.destroy$), take(1))
+          .subscribe((userId) => {
+            if (userId) {
+              const newTask: Task = {
+                id: `task_${Date.now()}_${Math.random()
+                  .toString(36)
+                  .substr(2, 9)}`,
+                title: result.title,
+                description: result.description,
+                priority: result.priority,
+                dueDate: new Date(result.dueDate),
+                completed: false,
+                userId,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              };
+              this.store.dispatch(
+                TaskActions.addTaskSuccess({ task: newTask })
+              );
+              this.persistAllTasksToLocalStorage();
+            }
+          });
       }
     });
   }
@@ -122,11 +146,16 @@ export class TaskListComponent implements OnInit, OnDestroy {
 
     dialogRef.afterClosed().subscribe((result) => {
       if (result) {
+        const updatedTask: Task = {
+          ...task,
+          ...result,
+          dueDate: result.dueDate ? new Date(result.dueDate) : task.dueDate,
+          updatedAt: new Date(),
+        };
         this.store.dispatch(
-          TaskActions.updateTask({
-            updateRequest: { id: task.id, ...result },
-          })
+          TaskActions.updateTaskSuccess({ task: updatedTask })
         );
+        this.persistAllTasksToLocalStorage();
       }
     });
   }
@@ -136,6 +165,7 @@ export class TaskListComponent implements OnInit, OnDestroy {
    */
   toggleTaskCompletion(taskId: string): void {
     this.store.dispatch(TaskActions.toggleTaskCompletion({ taskId }));
+    this.persistAllTasksToLocalStorage();
   }
 
   /**
@@ -143,7 +173,8 @@ export class TaskListComponent implements OnInit, OnDestroy {
    */
   deleteTask(taskId: string): void {
     if (confirm('Are you sure you want to delete this task?')) {
-      this.store.dispatch(TaskActions.deleteTask({ taskId }));
+      this.store.dispatch(TaskActions.deleteTaskSuccess({ taskId }));
+      this.persistAllTasksToLocalStorage();
     }
   }
 
@@ -223,5 +254,57 @@ export class TaskListComponent implements OnInit, OnDestroy {
    */
   clearError(): void {
     this.store.dispatch(TaskActions.clearTaskError());
+  }
+
+  private loadTasksFromLocalStorage(userId: string): void {
+    if (
+      isPlatformBrowser(this.platformId) &&
+      typeof localStorage !== 'undefined'
+    ) {
+      const tasksStr = localStorage.getItem(`tasks_${userId}`);
+      const tasks: Task[] = tasksStr ? JSON.parse(tasksStr) : [];
+      const tasksWithDates = tasks.map((t) => ({
+        ...t,
+        dueDate: new Date(t.dueDate),
+        createdAt: new Date(t.createdAt),
+        updatedAt: new Date(t.updatedAt),
+      }));
+      this.store.dispatch(
+        TaskActions.loadTasksSuccess({ tasks: tasksWithDates })
+      );
+    } else {
+      this.store.dispatch(TaskActions.loadTasksSuccess({ tasks: [] }));
+    }
+  }
+
+  private persistAllTasksToLocalStorage(): void {
+    if (
+      !(
+        isPlatformBrowser(this.platformId) &&
+        typeof localStorage !== 'undefined'
+      )
+    ) {
+      return;
+    }
+    // Wait a microtask to ensure state is updated
+    setTimeout(() => {
+      this.store
+        .select(TaskSelectors.selectAllTasks)
+        .pipe(take(1))
+        .subscribe((allTasks) => {
+          const tasksByUser = allTasks.reduce((acc, t) => {
+            if (!acc[t.userId]) acc[t.userId] = [];
+            acc[t.userId].push(t);
+            return acc;
+          }, {} as { [userId: string]: Task[] });
+
+          Object.keys(tasksByUser).forEach((uid) => {
+            localStorage.setItem(
+              `tasks_${uid}`,
+              JSON.stringify(tasksByUser[uid])
+            );
+          });
+        });
+    }, 0);
   }
 }

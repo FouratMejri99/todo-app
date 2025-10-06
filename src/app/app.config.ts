@@ -10,9 +10,8 @@ import {
   withEventReplay,
 } from '@angular/platform-browser';
 import { routes } from './app.routes';
-import { AuthEffects } from './auth/store/auth.effects';
 import { metaReducers, reducers } from './store/app.reducer';
-import { TaskEffects } from './tasks/store/task.effects';
+// No effects in use
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -21,7 +20,7 @@ export const appConfig: ApplicationConfig = {
     provideClientHydration(withEventReplay()),
     provideAnimations(),
     provideStore(reducers, { metaReducers }),
-    provideEffects([AuthEffects, TaskEffects]),
+    provideEffects([]),
     provideStoreDevtools({
       maxAge: 25,
       logOnly: false, // Set to true for production

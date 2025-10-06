@@ -1,62 +1,66 @@
-import { Injectable } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { Store } from '@ngrx/store';
+// Store is not required in this effects class
 import { of } from 'rxjs';
-import { catchError, map, switchMap, tap } from 'rxjs/operators';
+import { catchError, delay, map, switchMap, tap } from 'rxjs/operators';
 import { User } from '../../shared/models';
-import { AppState } from '../../store/app.state';
 import * as AuthActions from './auth.actions';
 
-/**
- * Auth Effects
- * Handles side effects for authentication operations
- */
 @Injectable()
 export class AuthEffects {
+  private readonly actions$ = inject(Actions);
+  private readonly platformId = inject(PLATFORM_ID);
   /**
    * Login Effect
-   * Simulates login process with mock authentication
+   * Simulates login with a 1s delay
    */
   login$ = createEffect(() =>
     this.actions$.pipe(
       ofType(AuthActions.login),
-      switchMap(({ loginRequest }) => {
-        // Simulate API call delay
-        return new Promise<User>((resolve) => {
-          setTimeout(() => {
-            // Mock user creation based on email
-            const user: User = {
-              id: this.generateUserId(loginRequest.email),
-              email: loginRequest.email,
-              name: this.extractNameFromEmail(loginRequest.email),
-              createdAt: new Date(),
-            };
-            resolve(user);
-          }, 1000);
-        });
-      }),
-      map((user) => {
-        // Store user in localStorage for persistence
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        return AuthActions.loginSuccess({ user });
-      }),
-      catchError((error) =>
-        of(AuthActions.loginFailure({ error: 'Login failed' }))
-      )
+      switchMap((action: ReturnType<typeof AuthActions.login>) => {
+        const { loginRequest } = action;
+
+        // Create mock user
+        const user: User = {
+          id: this.generateUserId(loginRequest.email),
+          email: loginRequest.email,
+          name: this.extractNameFromEmail(loginRequest.email),
+          createdAt: new Date(),
+        };
+
+        return of(user).pipe(
+          delay(1000), // simulate API delay
+          map((user: User) => {
+            if (
+              isPlatformBrowser(this.platformId) &&
+              typeof localStorage !== 'undefined'
+            ) {
+              localStorage.setItem('currentUser', JSON.stringify(user));
+            }
+            return AuthActions.loginSuccess({ user });
+          }),
+          catchError(() =>
+            of(AuthActions.loginFailure({ error: 'Login failed' }))
+          )
+        );
+      })
     )
   );
 
   /**
    * Logout Effect
-   * Handles user logout and cleanup
    */
   logout$ = createEffect(() =>
     this.actions$.pipe(
       ofType(AuthActions.logout),
       tap(() => {
-        // Clear user from localStorage
-        localStorage.removeItem('currentUser');
-        // Clear tasks for the user (this will be handled by tasks effects)
+        if (
+          isPlatformBrowser(this.platformId) &&
+          typeof localStorage !== 'undefined'
+        ) {
+          localStorage.removeItem('currentUser');
+        }
       }),
       map(() => AuthActions.logoutSuccess())
     )
@@ -64,13 +68,17 @@ export class AuthEffects {
 
   /**
    * Auto Login Effect
-   * Checks if user is already logged in from localStorage
    */
   autoLogin$ = createEffect(() =>
     this.actions$.pipe(
       ofType(AuthActions.autoLogin),
       map(() => {
-        const userStr = localStorage.getItem('currentUser');
+        const userStr =
+          isPlatformBrowser(this.platformId) &&
+          typeof localStorage !== 'undefined'
+            ? localStorage.getItem('currentUser')
+            : null;
+
         if (userStr) {
           const user: User = JSON.parse(userStr);
           return AuthActions.autoLoginSuccess({ user });
@@ -81,23 +89,39 @@ export class AuthEffects {
     )
   );
 
-  constructor(private actions$: Actions, private store: Store<AppState>) {}
+  constructor() {}
 
   /**
-   * Generate a unique user ID based on email
+   * Generate a unique user ID from email
    */
   private generateUserId(email: string): string {
-    return `user_${btoa(email)
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .substring(0, 8)}`;
+    const base64 = this.safeBase64Encode(email);
+    return `user_${base64.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)}`;
   }
 
   /**
-   * Extract a display name from email address
+   * Extract display name from email
    */
   private extractNameFromEmail(email: string): string {
     const name = email.split('@')[0];
     return name.charAt(0).toUpperCase() + name.slice(1);
   }
-}
 
+  /**
+   * Safe Base64 encoding (browser + Node.js)
+   */
+  private safeBase64Encode(value: string): string {
+    if (typeof btoa === 'function') {
+      return btoa(value);
+    }
+    try {
+      const nodeBuffer = (globalThis as any).Buffer;
+      if (nodeBuffer) {
+        return nodeBuffer.from(value, 'utf-8').toString('base64');
+      }
+    } catch {}
+    return Array.from(value)
+      .map((c) => c.charCodeAt(0).toString(16))
+      .join('');
+  }
+}

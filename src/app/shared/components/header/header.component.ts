@@ -6,10 +6,15 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Store } from '@ngrx/store';
 import { Observable, Subject } from 'rxjs';
+import { take } from 'rxjs/operators';
 
+import { isPlatformBrowser } from '@angular/common';
+import { Inject, PLATFORM_ID } from '@angular/core';
+import { Router } from '@angular/router';
 import * as AuthActions from '../../../auth/store/auth.actions';
 import * as AuthSelectors from '../../../auth/store/auth.selectors';
 import { AppState } from '../../../store/app.state';
+import * as TaskActions from '../../../tasks/store/task.actions';
 
 /**
  * Header Component
@@ -38,14 +43,28 @@ export class HeaderComponent implements OnInit, OnDestroy {
   /** Component destruction subject */
   private destroy$ = new Subject<void>();
 
-  constructor(private store: Store<AppState>) {
+  constructor(
+    private store: Store<AppState>,
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
     this.user$ = this.store.select(AuthSelectors.selectAuthUser);
     this.loading$ = this.store.select(AuthSelectors.selectAuthLoading);
   }
 
   ngOnInit(): void {
-    // Auto-login check on component initialization
-    this.store.dispatch(AuthActions.autoLogin());
+    // Hydrate user from localStorage since effects were removed
+    if (
+      isPlatformBrowser(this.platformId) &&
+      typeof localStorage !== 'undefined'
+    ) {
+      const userStr = localStorage.getItem('currentUser');
+      if (userStr) {
+        this.store.dispatch(
+          AuthActions.loginSuccess({ user: JSON.parse(userStr) })
+        );
+      }
+    }
   }
 
   ngOnDestroy(): void {
@@ -57,7 +76,25 @@ export class HeaderComponent implements OnInit, OnDestroy {
    * Handle logout action
    */
   onLogout(): void {
-    this.store.dispatch(AuthActions.logout());
+    const isBrowser =
+      isPlatformBrowser(this.platformId) && typeof localStorage !== 'undefined';
+
+    // Remove persisted tasks for the current user
+    this.store
+      .select(AuthSelectors.selectAuthUser)
+      .pipe(take(1))
+      .subscribe((user) => {
+        if (isBrowser && user?.id) {
+          localStorage.removeItem(`tasks_${user.id}`);
+        }
+      });
+
+    if (isBrowser) {
+      localStorage.removeItem('currentUser');
+    }
+    this.store.dispatch(TaskActions.clearTasks());
+    this.store.dispatch(AuthActions.logoutSuccess());
+    this.router.navigate(['/login']);
   }
 
   /**

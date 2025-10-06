@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { of } from 'rxjs';
@@ -24,7 +25,11 @@ export class TaskEffects {
       switchMap(({ userId }) => {
         return new Promise<Task[]>((resolve) => {
           setTimeout(() => {
-            const tasksStr = localStorage.getItem(`tasks_${userId}`);
+            const tasksStr =
+              isPlatformBrowser(this.platformId) &&
+              typeof localStorage !== 'undefined'
+                ? localStorage.getItem(`tasks_${userId}`)
+                : null;
             const tasks: Task[] = tasksStr ? JSON.parse(tasksStr) : [];
             // Convert date strings back to Date objects
             const tasksWithDates = tasks.map((task) => ({
@@ -146,12 +151,17 @@ export class TaskEffects {
           }, {} as { [userId: string]: Task[] });
 
           // Save each user's tasks to localStorage
-          Object.keys(tasksByUser).forEach((userId) => {
-            localStorage.setItem(
-              `tasks_${userId}`,
-              JSON.stringify(tasksByUser[userId])
-            );
-          });
+          if (
+            isPlatformBrowser(this.platformId) &&
+            typeof localStorage !== 'undefined'
+          ) {
+            Object.keys(tasksByUser).forEach((userId) => {
+              localStorage.setItem(
+                `tasks_${userId}`,
+                JSON.stringify(tasksByUser[userId])
+              );
+            });
+          }
 
           return of({ type: '[Tasks] Save to LocalStorage Success' });
         })
@@ -170,7 +180,11 @@ export class TaskEffects {
     )
   );
 
-  constructor(private actions$: Actions, private store: Store<AppState>) {}
+  constructor(
+    private actions$: Actions,
+    private store: Store<AppState>,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {}
 
   /**
    * Generate a unique task ID
@@ -179,4 +193,3 @@ export class TaskEffects {
     return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 }
-
