@@ -1,0 +1,146 @@
+/* Task Form Dialog Styles */
+.task-form-dialog {
+  display: flex;
+  flex-direction: column;
+  min-width: 400px;
+}
+
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.dialog-content {
+  padding: 0;
+  margin-bottom: 24px;
+}
+
+.task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.half-width {
+  flex: 1;
+}
+
+/* Priority Options */
+.priority-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.priority-option mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Priority Icon Colors */
+.priority-1 {
+  color: #2e7d32;
+}
+.priority-2 {
+  color: #ef6c00;
+}
+.priority-3 {
+  color: #1976d2;
+}
+.priority-4 {
+  color: #c2185b;
+}
+.priority-5 {
+  color: #d32f2f;
+}
+
+/* Form Validation Summary */
+.form-validation-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #fff3e0;
+  border-radius: 8px;
+  border-left: 4px solid #ff9800;
+  color: #e65100;
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+
+.form-validation-summary mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Dialog Actions */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+}
+
+.cancel-button {
+  color: #666;
+}
+
+.submit-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.submit-button mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .task-form-dialog {
+    min-width: 100%;
+    max-width: 100vw;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .half-width {
+    width: 100%;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .cancel-button,
+  .submit-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

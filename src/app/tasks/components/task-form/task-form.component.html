@@ -1,0 +1,134 @@
+<!-- Task Form Dialog Template -->
+<div class="task-form-dialog">
+  <!-- Dialog Header -->
+  <div mat-dialog-title class="dialog-title">
+    <mat-icon>{{ mode === "create" ? "add_task" : "edit" }}</mat-icon>
+    {{ getDialogTitle() }}
+  </div>
+
+  <!-- Dialog Content -->
+  <div mat-dialog-content class="dialog-content">
+    <form [formGroup]="taskForm" (ngSubmit)="onSubmit()" class="task-form">
+      <!-- Title Field -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Task Title *</mat-label>
+        <input
+          matInput
+          formControlName="title"
+          placeholder="Enter task title"
+          maxlength="100"
+          [class.mat-form-field-invalid]="hasError('title')"
+        />
+        <mat-hint align="end"
+          >{{ taskForm.get("title")?.value?.length || 0 }}/100</mat-hint
+        >
+
+        <!-- Error Messages -->
+        <mat-error *ngIf="hasError('title')">
+          {{ getTitleErrorMessage() }}
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Description Field -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Description</mat-label>
+        <textarea
+          matInput
+          formControlName="description"
+          placeholder="Enter task description (optional)"
+          rows="3"
+          maxlength="500"
+          [class.mat-form-field-invalid]="hasError('description')"
+        ></textarea>
+        <mat-hint align="end"
+          >{{ taskForm.get("description")?.value?.length || 0 }}/500</mat-hint
+        >
+
+        <!-- Error Messages -->
+        <mat-error *ngIf="hasError('description')">
+          {{ getDescriptionErrorMessage() }}
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Priority and Due Date Row -->
+      <div class="form-row">
+        <!-- Priority Field -->
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Priority *</mat-label>
+          <mat-select
+            formControlName="priority"
+            [class.mat-form-field-invalid]="hasError('priority')"
+          >
+            <mat-option
+              *ngFor="let option of priorityOptions"
+              [value]="option.value"
+            >
+              <span class="priority-option">
+                <mat-icon [ngClass]="'priority-' + option.value">{{
+                  getPriorityIcon(option.value)
+                }}</mat-icon>
+                {{ option.label }}
+              </span>
+            </mat-option>
+          </mat-select>
+
+          <!-- Error Messages -->
+          <mat-error *ngIf="hasError('priority')">
+            {{ getPriorityErrorMessage() }}
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Due Date Field -->
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Due Date *</mat-label>
+          <input
+            matInput
+            [matDatepicker]="dueDatePicker"
+            formControlName="dueDate"
+            placeholder="Choose due date"
+            [min]="getMinDate()"
+            [class.mat-form-field-invalid]="hasError('dueDate')"
+          />
+          <mat-datepicker-toggle
+            matSuffix
+            [for]="dueDatePicker"
+          ></mat-datepicker-toggle>
+          <mat-datepicker #dueDatePicker></mat-datepicker>
+
+          <!-- Error Messages -->
+          <mat-error *ngIf="hasError('dueDate')">
+            {{ getDueDateErrorMessage() }}
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Form Validation Summary -->
+      <div
+        *ngIf="taskForm.invalid && taskForm.touched"
+        class="form-validation-summary"
+      >
+        <mat-icon>warning</mat-icon>
+        <span>Please fix the errors above before submitting</span>
+      </div>
+    </form>
+  </div>
+
+  <!-- Dialog Actions -->
+  <div mat-dialog-actions class="dialog-actions">
+    <button mat-button type="button" (click)="onCancel()" class="cancel-button">
+      Cancel
+    </button>
+    <button
+      mat-raised-button
+      color="primary"
+      type="submit"
+      (click)="onSubmit()"
+      [disabled]="taskForm.invalid"
+      class="submit-button"
+    >
+      <mat-icon>{{ mode === "create" ? "add" : "save" }}</mat-icon>
+      {{ getSubmitButtonText() }}
+    </button>
+  </div>
+</div>
+

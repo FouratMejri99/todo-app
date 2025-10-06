@@ -1,0 +1,130 @@
+<!-- Task List Component Template -->
+<div class="task-list-container">
+  <!-- Header Section -->
+  <div class="task-list-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>checklist</mat-icon>
+        My Tasks
+      </h1>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="openCreateTaskDialog()"
+        class="add-task-button"
+      >
+        <mat-icon>add</mat-icon>
+        Add Task
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading$ | async" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading tasks...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error$ | async as error" class="error-container">
+    <mat-icon>error</mat-icon>
+    <p>{{ error }}</p>
+    <button mat-button color="primary" (click)="clearError()">Dismiss</button>
+  </div>
+
+  <!-- Tasks List -->
+  <div *ngIf="!(loading$ | async)" class="tasks-container">
+    <div *ngIf="(tasks$ | async)?.length === 0" class="empty-state">
+      <mat-icon>assignment_turned_in</mat-icon>
+      <h3>No tasks yet</h3>
+      <p>Create your first task to get started!</p>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="openCreateTaskDialog()"
+      >
+        <mat-icon>add</mat-icon>
+        Create Task
+      </button>
+    </div>
+
+    <div *ngFor="let task of tasks$ | async" class="task-item">
+      <mat-card
+        class="task-card"
+        [class.completed]="task.completed"
+        [class.overdue]="isOverdue(task)"
+      >
+        <mat-card-content>
+          <!-- Task Header -->
+          <div class="task-header">
+            <div class="task-title-section">
+              <mat-checkbox
+                [checked]="task.completed"
+                (change)="toggleTaskCompletion(task.id)"
+                class="task-checkbox"
+              ></mat-checkbox>
+              <h3 class="task-title" [class.strikethrough]="task.completed">
+                {{ task.title }}
+              </h3>
+            </div>
+
+            <div class="task-actions">
+              <button
+                mat-icon-button
+                (click)="openEditTaskDialog(task)"
+                matTooltip="Edit task"
+                class="action-button"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="deleteTask(task.id)"
+                matTooltip="Delete task"
+                class="action-button delete-button"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <!-- Task Description -->
+          <p *ngIf="task.description" class="task-description">
+            {{ task.description }}
+          </p>
+
+          <!-- Task Meta Information -->
+          <div class="task-meta">
+            <!-- Priority -->
+            <div
+              class="priority-badge"
+              [ngClass]="getPriorityClass(task.priority)"
+            >
+              <mat-icon>flag</mat-icon>
+              {{ getPriorityLabel(task.priority) }}
+            </div>
+
+            <!-- Due Date -->
+            <div
+              class="due-date"
+              [ngClass]="{
+                overdue: isOverdue(task),
+                today: getDueDateText(task) === 'Today'
+              }"
+            >
+              <mat-icon>schedule</mat-icon>
+              {{ getDueDateText(task) }}
+            </div>
+
+            <!-- Created Date -->
+            <div class="created-date">
+              <mat-icon>access_time</mat-icon>
+              Created {{ task.createdAt | date : "MMM d, y" }}
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
+

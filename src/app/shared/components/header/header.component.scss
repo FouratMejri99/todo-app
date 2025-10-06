@@ -1,0 +1,121 @@
+/* Header Component Styles */
+.app-header {
+  background-color: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  height: 64px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.header-brand mat-icon {
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+  color: #1976d2;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.user-info mat-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+  color: #999;
+}
+
+.user-name {
+  font-weight: 500;
+}
+
+.logout-button {
+  color: #666;
+  transition: color 0.2s ease;
+}
+
+.logout-button:hover {
+  color: #f44336;
+}
+
+.logout-button:disabled {
+  color: #ccc;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 0 16px;
+    height: 56px;
+  }
+
+  .header-brand {
+    font-size: 1.3rem;
+    gap: 8px;
+  }
+
+  .header-brand mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+
+  .header-user {
+    gap: 12px;
+  }
+
+  .user-info {
+    font-size: 0.9rem;
+  }
+
+  .user-info mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    padding: 0 12px;
+  }
+
+  .header-brand span {
+    display: none;
+  }
+
+  .user-name {
+    display: none;
+  }
+}
+
